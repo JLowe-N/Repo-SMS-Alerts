@@ -4,7 +4,7 @@ function simpleResponse(statusCode, message) {
     status: statusCode
   }
 
-  return new Response(JSON.stringify(resp) {
+  return new Response(JSON.stringify(resp), {
     headers: { "Content-Type": "application/json" },
     status: statusCode
   })
@@ -30,7 +30,9 @@ async function githubWebhookHandler(request) {
 
     if (!checkSignature(formData, headers)) {
       return simpleResponse(403, "Wrong password, try again! :P")
-    }
+    } 
+
+    return await sendText(`${sender_name} casted spell: ${action} onto your repo ${repo_name}`)
 
   } catch (e) {
     return simpleResponse(
@@ -54,4 +56,29 @@ async function checkSignature(formData, headers) {
   let actualSignature = headers.get("X-Hub-Signature")
 
   return expectedSignature === actualSignature
+}
+
+async function sendText(message){
+  const endpoint = "https://api.twilio.com/2010-04-01/Accounts/" + ACCOUNT_SID + "/Messages.json"
+
+  let encoded = new URLSearchParams()
+  encoded.append("To", RECIPIENT)
+  encoded.append("From", "+13206133157")
+  encoded.append("Body", message)
+
+  let token = btoa(ACCOUNT_SID + ":" + AUTH_TOKEN)
+
+  const request = {
+    body: encoded,
+    method: "POST",
+    headers: {
+      "Authorization": `Basic ${token}`,
+      "Content-Type": "application/x-www-form-urlencoded"
+    }
+  }
+
+  let result = await fetch(endpoint, request)
+  result = await result.json()
+
+  return new Response(JSON.stringify(result), request)
 }
